@@ -1,0 +1,137 @@
+---
+title: "TP: Analyse en Composantes Principales"
+author: Nathan MARIÉ
+date: 28 avril 2023
+output:
+  pdf_document:
+    fig_width: 5 
+    fig_height: 4
+    number_sections: T
+---
+
+
+# Objectif
+
+L'objectif est de prendre en main l'ACP, pour analyser un jeu de données élémentaire.
+
+# Jeu de données
+
+## Chargement
+
+On commence par travailler sur le fichiers de notes vu en cours :
+
+```{r, echo=T, message=F}
+fichier <- "notes.csv"
+x <- read.csv(fichier, header=T)
+x
+```
+
+La totalité du tableau de notes est affichée (pas seulement son début par la fonction `head`), il s'agit donc bien d'un tableau très court : 5 individus, 4 variables.
+
+## Homogénéisation de la variable **Anglais**
+
+```{r, echo=T, message=F}
+x$Anglais <- x$Anglais/100*20
+x
+```
+
+\newpage
+
+# ACP
+
+## Calcul sur le tableau de notes homogénéisé
+
+Les notes étant maintenant « homogènes » (même unité), on fait un centrage (de manière implicite, car c'est obligatoire dans l'ACP), mais **pas de réduction**. C'est le rôle du paramètre : `scale.unit=F`.
+\newline
+
+
+```{r, echo=T, message=F}
+library(FactoMineR)
+acp.res <- PCA(x, scale.unit=F, graph=F, ncp=ncol(x))
+```
+
+## Variance expliquée et pourcentages de variance expliquée
+
+On voit voit ici la part de variance expliquée de chaque axe principal (2nde colonne, et 3ième pour le cumul des variances expliquées) :
+
+```{r, echo=T, fig=T, message=F, fig.align='center'}
+acp.res$eig
+barplot(acp.res$eig[,3], main="inertie expliquée cumulée", col="blue")
+```
+
+On remarque qu'avec 2 axes principaux (sous-espace de dimension 2), on conserve 98.65% de la variance totale (inertie totale). 
+
+On décide donc de travailler avec `r=2` variables.
+
+\newpage
+
+## Représentation des individus
+
+```{r, echo=T, message=F, fig.align='center'}
+acp.res$ind$coord
+```
+
+```{r, echo=T, fig=T, message=F, fig.align='center'}
+plot(acp.res, axes=c(1,2), choix="ind", title="Représentation des individus \n
+     Plan des 2 premières composantes principales ")
+```
+
+On constate déjà que sur les 5 élèves, 2 sont assez proches : Erwan et Élise.
+
+## Représentation des variables
+
+Corrélations entre variables initiales et les composantes principales :
+
+```{r, echo=T, message=F, fig.align='center'}
+acp.res$var$cor
+```
+
+\newpage
+
+En spécifiant  le paramètre `choix="varcor"`, on représente les variables centrées réduites : ce graphe des variables est plus facile à interpréter que celui des variables seulement centrées, car les coordonnées des variables initiales s'interprètent comme des **corrélations** (au lieu de **covariances**).
+\newline
+
+```{r, echo=T, fig=T, message=F, fig.align='center'}
+plot(acp.res, axes=c(1,2), choix="varcor", title="Représentation des variables\n
+     Corrélations entre les variables initiales et les 2 premières CP")
+```
+
+Ce graphe des corrélations nous aide à interpréter les 2 composantes principales retenues :
+
+- **1ère composante principale** (Dim. 1) : elle est fortement corrélée aux 2 matières d'**algorithmique**.
+
+- **2ième composante principale** (Dim. 2) : elle est très corrélée à l'**anglais**.
+
+- la matière Web est mal représentée (elle est assez éloignée du cercle de corrélation) : cela signifie que la variable Web est corrélée avec des composantes principales non retenues (3ième ou 4ième). Mais ça n'est pas gênant, car sa variance est très faible (les 3ième et 4ième composantes principales traduisent moins de 2% de l'inertie totale).
+
+On comprend mieux pourquoi 2 composantes principales suffisent à conserver la quasi totalité de l'inertie/variance du jeu de données :
+
+- Web n'apporte pas de variance : 3 suffiraient, on l'avait deviné dès le départ.
+
+- Algo1 et Algo2 sont toutes 2 très corrélées à 1 même composante principale : elles sont donc probablement très corrélées entre elles. Vérifions le :\newline
+
+```{r, echo=T, message=F}
+cor(x$Algo1, x$Algo2)
+```
+
+Elles apportent donc la même information : 1 composante principale suffit donc à traduire cette variabilité entre individus. 
+
+\newpage 
+Au final, 2 composantes principales suffisent à expliquer toutes les variations entre individus : 
+
+- une pour l'algorithmique (de forte inertie, car c'est l'addition de l'inertie des 2 matières d'algo) ;
+  
+- une pour l'autre variable initiale d'inertie conséquente - l'anglais. 
+
+C'est bien ce que l'on a obtenu.
+
+
+## Interprétation du graphe des individus, grâce à l'interprétation des composantes principales
+
+On déduit que :
+
+- Rémi et Anna sont bons (meilleurs que la moyenne) en algorithmique. C'est l'inverse pour les 3 autres élèves.
+- Rémi et James sont bons en anglais, au contraire des 3 autres élèves, Anna étant particulièrement en difficulté.
+
+
+
